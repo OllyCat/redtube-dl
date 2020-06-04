@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -37,28 +38,47 @@ func main() {
 }
 
 func parce(u string) (string, error) {
-	uParced, err := url.Parse(u)
+	up, err := url.Parse(u)
 	if err != nil {
 		return "", err
 	}
 
-	if !strings.HasPrefix(uParced.Scheme, "http") {
+	if !strings.HasPrefix(up.Scheme, "http") {
 		return "", errors.New("Invalid URL")
 	}
 
-	return strings.Trim(uParced.Path, `/`), nil
+	resp, err := http.Get(u)
+	if err != nil {
+		return "", errors.New(fmt.Sprintf("Could not get url: %v\n", err))
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", errors.New(fmt.Sprintf("Could not get url: %v\n", err))
+	}
+
+	r := regexp.MustCompile(`meta name="twitter:player" content="(https://embed.redtube.com/\?id=\d+)"`)
+	res := r.FindSubmatch(body)
+
+	if len(res) < 2 {
+		return "", errors.New(fmt.Sprintf("Could not find player url: %v\n", err))
+	}
+
+	return string(res[1]), nil
 }
 
 func get(id string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	res, err := http.Get("https://embed.redtube.com/?id=" + id)
+	res, err := http.Get(id)
 	if err != nil {
 		log.Printf("ERROR: id %s get error\n", id)
 		return
 	}
+	defer res.Body.Close()
 
-	flashReg := regexp.MustCompile(`flashvars_vid\d* = ({.*});`)
+	fr := regexp.MustCompile(`flashvars_vid\d* = ({.*});`)
 
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
@@ -66,16 +86,14 @@ func get(id string, wg *sync.WaitGroup) {
 		return
 	}
 
-	res.Body.Close()
-
-	flashRes := flashReg.FindSubmatch(body)
-	if len(flashRes) < 2 {
+	fres := fr.FindSubmatch(body)
+	if len(fres) < 2 {
 		log.Printf("ERROR: id %s flashvars not found\n", id)
 		return
 	}
 
 	js := JsonScript{}
-	json.Unmarshal(flashRes[1], &js)
+	json.Unmarshal(fres[1], &js)
 
 	qMax := 0
 	var vUrl string
