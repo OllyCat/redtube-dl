@@ -1,6 +1,7 @@
 package main
 
-type JsonScript struct {
+// JSONScript struct
+type JSONScript struct {
 	DisableSharebar   int    `json:"disable_sharebar"`
 	HTMLPauseRoll     string `json:"htmlPauseRoll"`
 	HTMLPostRoll      string `json:"htmlPostRoll"`

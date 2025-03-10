@@ -1,3 +1,4 @@
+// package main
 package main
 
 import (
@@ -63,13 +64,13 @@ func parce(u string) (string, error) {
 
 	_, body, err := client.Get(nil, u)
 	if err != nil {
-		return "", errors.New(fmt.Sprintf("Could not get url: %v\n", err))
+		return "", fmt.Errorf("could not get url: %v", err)
 	}
 
 	res := r.FindSubmatch(body)
 
 	if len(res) < 2 {
-		return "", fmt.Errorf("Could not find player url: %w\n", err)
+		return "", fmt.Errorf("could not find player url: %w", err)
 	}
 
 	return string(res[1]), nil
@@ -104,11 +105,11 @@ func get(id string, wg *sync.WaitGroup) {
 		}
 	}
 
-	js := JsonScript{}
+	js := JSONScript{}
 	json.Unmarshal(fres[1], &js)
 
 	qMax := 0
-	var vUrl string
+	var vURL string
 
 	for _, m := range js.MediaDefinitions {
 		q, err := strconv.Atoi(m.Quality)
@@ -118,12 +119,12 @@ func get(id string, wg *sync.WaitGroup) {
 
 		if q > qMax {
 			qMax = q
-			vUrl = m.VideoURL
+			vURL = m.VideoURL
 		}
 	}
 
-	log.Printf("Quality: %d\nVideo URL: %s\nTitle: %s\n", qMax, vUrl, js.VideoTitle)
+	log.Printf("Quality: %d\nVideo URL: %s\nTitle: %s\n", qMax, vURL, js.VideoTitle)
 
-	ariago.Aria(vUrl, js.VideoTitle+".mp4")
+	ariago.Aria(vURL, js.VideoTitle+".mp4")
 	return
 }
